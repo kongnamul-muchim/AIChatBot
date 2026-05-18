@@ -25,10 +25,16 @@ async function executeReply(channel, user, question, session) {
     const provider = createProvider(session.model, { apiKey, model: session.model });
     logger.chat(user, channel.name, question);
 
-    const reply = await provider.generateChat(session.systemPrompt, session.history, question);
+    // 컨텍스트 조립: 최근 대화 + 키워드 검색 + 기억
+    const enrichedHistory = await sessionStore.buildContext(channel.id, question);
+    const reply = await provider.generateChat(session.systemPrompt, enrichedHistory, question);
 
-    sessionStore.addMessage(channel.id, 'user', question);
-    sessionStore.addMessage(channel.id, 'model', reply);
+    // 메시지 저장 + MongoDB에도 저장
+    await sessionStore.addMessage(channel.id, 'user', question);
+    await sessionStore.addMessage(channel.id, 'model', reply);
+
+    // 중요한 정보 기억하기
+    await sessionStore.learnFromMessage(channel.id, question, reply);
 
     logger.ai(session.model, reply.substring(0, 80) + (reply.length > 80 ? '...' : ''));
 

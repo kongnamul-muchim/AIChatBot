@@ -67,12 +67,13 @@ export function createBot(token) {
     }
   }
 
-  // ───────────── AI 자동 응답 (공통 로직) ─────────────
+  // ───────────── AI 자동 응답 (컨텍스트+기억 시스템) ─────────────
   async function handleAutoReply(message, text) {
     if (!text || text.trim().length === 0) return;
 
-    const session = sessionStore.getOrCreate(message.channel.id);
-    if (!session.autochat) return; // 자동응답 꺼져있으면 무시
+    const channelId = message.channel.id;
+    const session = sessionStore.getOrCreate(channelId);
+    if (!session.autochat) return;
 
     await message.channel.sendTyping();
 
@@ -85,10 +86,16 @@ export function createBot(token) {
       const provider = createProvider(session.model, { apiKey, model: session.model });
       logger.chat(message.author.username, message.channel.name, text);
 
-      const reply = await provider.generateChat(session.systemPrompt, session.history, text);
+      // 컨텍스트 조립: 최근 대화 + 키워드 검색 + 기억
+      const enrichedHistory = await sessionStore.buildContext(channelId, text);
+      const reply = await provider.generateChat(session.systemPrompt, enrichedHistory, text);
 
-      sessionStore.addMessage(message.channel.id, 'user', text);
-      sessionStore.addMessage(message.channel.id, 'model', reply);
+      // 메시지 저장 + MongoDB에도 저장
+      await sessionStore.addMessage(channelId, 'user', text);
+      await sessionStore.addMessage(channelId, 'model', reply);
+
+      // 중요한 정보 기억하기 (자동 학습)
+      await sessionStore.learnFromMessage(channelId, text, reply);
 
       logger.ai(session.model, reply.substring(0, 80) + (reply.length > 80 ? '...' : ''));
 
@@ -103,7 +110,6 @@ export function createBot(token) {
       }
     } catch (err) {
       logger.error(`Auto-reply error: ${err.message}`);
-      // 에러 메시지는 조용히 — 너무 자주 뜨면 귀찮음
     }
   }
 
