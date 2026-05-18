@@ -12,7 +12,7 @@ export const data = {
 /** !system [프롬프트] / !system + [추가] */
 export async function handleMessage(message, args) {
   const channelId = message.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
 
   if (args.length === 0) {
     return message.reply(
@@ -58,7 +58,7 @@ export async function handleMessage(message, args) {
 /** /system [프롬프트] 또는 /system 프롬프트:+ [추가] */
 export async function handleInteraction(interaction) {
   const channelId = interaction.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
   const input = interaction.options.getString('프롬프트');
 
   if (!input) {

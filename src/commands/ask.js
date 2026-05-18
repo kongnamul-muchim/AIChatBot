@@ -52,7 +52,7 @@ export async function handleMessage(message, args) {
   }
 
   const question = args.join(' ');
-  const session = sessionStore.getOrCreate(message.channel.id);
+  const session = await sessionStore.getOrCreate(message.channel.id);
   const result = await executeReply(message.channel, message.author.username, question, session);
   await sendReply(message, result);
 }
@@ -60,7 +60,7 @@ export async function handleMessage(message, args) {
 /** /ask 질문:... */
 export async function handleInteraction(interaction) {
   const question = interaction.options.getString('질문');
-  const session = sessionStore.getOrCreate(interaction.channel.id);
+  const session = await sessionStore.getOrCreate(interaction.channel.id);
   const result = await executeReply(interaction.channel, interaction.user.username, question, session);
 
   if (result.content.length <= 2000) {

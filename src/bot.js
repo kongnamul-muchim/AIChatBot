@@ -72,7 +72,7 @@ export function createBot(token) {
     if (!text || text.trim().length === 0) return;
 
     const channelId = message.channel.id;
-    const session = sessionStore.getOrCreate(channelId);
+    const session = await sessionStore.getOrCreate(channelId);
     if (!session.autochat) return;
 
     await message.channel.sendTyping();

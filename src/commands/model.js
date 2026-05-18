@@ -25,7 +25,7 @@ function getModelList(currentModel) {
 /** !model [모델명] */
 export async function handleMessage(message, args) {
   const channelId = message.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
 
   if (args.length === 0) {
     const displayName = GeminiProvider.getDisplayName(session.model);
@@ -61,7 +61,7 @@ export async function handleMessage(message, args) {
 /** /model [모델명] */
 export async function handleInteraction(interaction) {
   const channelId = interaction.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
   const input = interaction.options.getString('모델명');
 
   if (!input) {

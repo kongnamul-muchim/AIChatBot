@@ -12,7 +12,7 @@ export const data = {
 /** !autochat [on/off] */
 export async function handleMessage(message, args) {
   const channelId = message.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
 
   if (args.length === 0) {
     const status = session.autochat ? '🟢 켜짐' : '🔴 꺼짐';
@@ -45,7 +45,7 @@ export async function handleMessage(message, args) {
 /** /autochat [상태] */
 export async function handleInteraction(interaction) {
   const channelId = interaction.channel.id;
-  const session = sessionStore.getOrCreate(channelId);
+  const session = await sessionStore.getOrCreate(channelId);
   const input = interaction.options.getString('상태');
 
   if (!input) {

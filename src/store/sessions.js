@@ -27,14 +27,16 @@ class SessionStore {
     this.initialized = true;
   }
 
-  getOrCreate(channelId) {
+  async getOrCreate(channelId) {
     if (!this.sessions.has(channelId)) {
+      // MongoDB에 저장된 세션 정보가 있는지 확인
+      const saved = await loadSession(channelId);
       this.sessions.set(channelId, {
         history: [],
-        systemPrompt: DEFAULT_SYSTEM_PROMPT,
-        model: DEFAULT_MODEL,
-        autochat: true,
-        createdAt: Date.now(),
+        systemPrompt: saved?.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+        model: saved?.model || DEFAULT_MODEL,
+        autochat: saved?.autochat ?? true,
+        createdAt: saved?.createdAt || Date.now(),
       });
     }
     return this.sessions.get(channelId);
