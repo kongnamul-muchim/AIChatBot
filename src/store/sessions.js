@@ -50,7 +50,7 @@ class SessionStore {
    * 대화 기록에 추가 + MongoDB에도 저장
    */
   async addMessage(channelId, role, content) {
-    const session = this.getOrCreate(channelId);
+    const session = await this.getOrCreate(channelId);
     session.history.push({ role, content, timestamp: Date.now() });
 
     if (session.history.length > MAX_HISTORY_LENGTH) {
@@ -80,26 +80,26 @@ class SessionStore {
     });
   }
 
-  setSystemPrompt(channelId, prompt) {
-    const session = this.getOrCreate(channelId);
+  async setSystemPrompt(channelId, prompt) {
+    const session = await this.getOrCreate(channelId);
     session.systemPrompt = prompt;
-    saveSession(channelId, { systemPrompt: prompt });
+    await saveSession(channelId, { systemPrompt: prompt });
   }
 
-  setModel(channelId, model) {
-    const session = this.getOrCreate(channelId);
+  async setModel(channelId, model) {
+    const session = await this.getOrCreate(channelId);
     session.model = model;
-    saveSession(channelId, { model });
+    await saveSession(channelId, { model });
   }
 
-  setAutochat(channelId, enabled) {
-    const session = this.getOrCreate(channelId);
+  async setAutochat(channelId, enabled) {
+    const session = await this.getOrCreate(channelId);
     session.autochat = enabled;
-    saveSession(channelId, { autochat: enabled });
+    await saveSession(channelId, { autochat: enabled });
   }
 
-  getHistory(channelId) {
-    const session = this.getOrCreate(channelId);
+  async getHistory(channelId) {
+    const session = await this.getOrCreate(channelId);
     return session.history;
   }
 
@@ -108,7 +108,12 @@ class SessionStore {
    * - 최근 N개 대화 + 키워드 검색 결과 + 기억
    */
   async buildContext(channelId, userMessage) {
-    const session = this.getOrCreate(channelId);
+    const session = await this.getOrCreate(channelId);
+
+    // 0) 캐릭터 프로필 로드
+    const { getProfile, profileToPrompt } = await import('./database.js');
+    const profile = await getProfile(channelId);
+    const profilePrompt = profileToPrompt(profile);
 
     // 1) 최근 대화 (메모리)
     const recentHistory = session.history.slice(-20);
@@ -124,7 +129,12 @@ class SessionStore {
     let context = [];
 
     // 시스템 프롬프트
-    context.push({ role: 'system', content: session.systemPrompt });
+    if (profilePrompt) {
+      // 프로필이 있으면 프로필 + 시스템 프롬프트 합쳐서 전달
+      context.push({ role: 'system', content: `${profilePrompt}\n\n${session.systemPrompt}` });
+    } else {
+      context.push({ role: 'system', content: session.systemPrompt });
+    }
 
     // 저장된 기억이 있으면 맥락에 추가
     if (allMemories.length > 0) {
@@ -187,7 +197,7 @@ class SessionStore {
   }
 
   async getContextInfo(channelId) {
-    const session = this.getOrCreate(channelId);
+    const session = await this.getOrCreate(channelId);
     const history = session.history;
     const totalChars = history.reduce((acc, msg) => acc + msg.content.length, 0);
     const userMessages = history.filter((m) => m.role === 'user').length;

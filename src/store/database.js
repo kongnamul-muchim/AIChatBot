@@ -58,6 +58,19 @@ const memorySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
+// ───────────── 캐릭터 프로필 스키마 ─────────────
+const profileSchema = new mongoose.Schema({
+  channelId:   { type: String, required: true, unique: true },
+  name:        { type: String, default: '' },
+  age:         { type: String, default: '' },
+  personality: { type: String, default: '' },
+  tone:        { type: String, default: '' },
+  likes:       { type: String, default: '' },
+  hates:       { type: String, default: '' },
+  setting:     { type: String, default: '' },
+  updatedAt:   { type: Date, default: Date.now },
+});
+
 // 복합 인덱스: 채널 + 키워드 검색 최적화
 messageSchema.index({ channelId: 1, keywords: 1 });
 memorySchema.index({ channelId: 1, keywords: 1 });
@@ -65,6 +78,7 @@ memorySchema.index({ channelId: 1, keywords: 1 });
 const Message = mongoose.model('Message', messageSchema);
 const Session = mongoose.model('Session', sessionSchema);
 const Memory  = mongoose.model('Memory', memorySchema);
+const Profile = mongoose.model('Profile', profileSchema);
 
 // ───────────── 키워드 추출 ─────────────
 
@@ -320,4 +334,95 @@ export async function cleanupOldMessages(days = 30) {
     logger.error(`정리 실패: ${err.message}`);
     return 0;
   }
+}
+
+// ───────────── 캐릭터 프로필 ─────────────
+
+/**
+ * 프로필 조회
+ */
+export async function getProfile(channelId) {
+  if (!connected) return null;
+  try {
+    return await Profile.findOne({ channelId }).lean();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 프로필 항목 저장
+ */
+const VALID_FIELDS = ['name', 'age', 'personality', 'tone', 'likes', 'hates', 'setting'];
+
+export async function setProfileField(channelId, field, value) {
+  if (!connected) return null;
+  if (!VALID_FIELDS.includes(field)) return null;
+
+  try {
+    const update = { [field]: value, updatedAt: new Date() };
+    const profile = await Profile.findOneAndUpdate(
+      { channelId },
+      { $set: update },
+      { upsert: true, new: true }
+    ).lean();
+    return profile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 프로필 항목 삭제
+ */
+export async function removeProfileField(channelId, field) {
+  if (!connected) return null;
+  if (!VALID_FIELDS.includes(field)) return null;
+
+  try {
+    const profile = await Profile.findOneAndUpdate(
+      { channelId },
+      { $unset: { [field]: '' }, $set: { updatedAt: new Date() } },
+      { new: true }
+    ).lean();
+    return profile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 프로필 전체 삭제
+ */
+export async function clearProfile(channelId) {
+  if (!connected) return;
+  try {
+    await Profile.deleteOne({ channelId });
+  } catch {}
+}
+
+/**
+ * 프로필을 시스템 프롬프트 형식으로 변환
+ */
+export function profileToPrompt(profile) {
+  if (!profile) return null;
+
+  const labels = {
+    name: '이름',
+    age: '나이',
+    personality: '성격',
+    tone: '말투',
+    likes: '좋아하는 것',
+    hates: '싫어하는 것',
+    setting: '설정',
+  };
+
+  const lines = ['[캐릭터 프로필]'];
+  for (const field of VALID_FIELDS) {
+    if (profile[field]) {
+      lines.push(`${labels[field]}: ${profile[field]}`);
+    }
+  }
+
+  return lines.length > 1 ? lines.join('\n') : null;
 }

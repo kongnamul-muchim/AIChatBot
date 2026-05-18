@@ -13,6 +13,7 @@ import * as cmdSystem from './commands/system.js';
 import * as cmdModel from './commands/model.js';
 import * as cmdContext from './commands/context.js';
 import * as cmdAutochat from './commands/autochat.js';
+import * as cmdProfile from './commands/profile.js';
 
 const PREFIX = process.env.PREFIX || '!';
 
@@ -26,6 +27,7 @@ const commands = {
   model:   cmdModel,
   context: cmdContext,
   autochat: cmdAutochat,
+  profile: cmdProfile,
   help: { data: { name: 'help', description: '명령어 도움말', options: [] }, handleMessage: handleHelpMsg, handleInteraction: handleHelpSlash },
 };
 

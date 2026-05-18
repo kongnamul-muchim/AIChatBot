@@ -9,10 +9,11 @@ export const data = {
 };
 
 async function buildContextMessage(channelId) {
-  const info = sessionStore.getContextInfo(channelId);
+  const info = await sessionStore.getContextInfo(channelId);
   const stats = sessionStore.getStats();
 
-  const recentHistory = sessionStore.getHistory(channelId).slice(-5);
+  const history = await sessionStore.getHistory(channelId);
+  const recentHistory = history.slice(-5);
   let recentPreview = '';
   if (recentHistory.length > 0) {
     const lines = recentHistory.map((msg) => {
