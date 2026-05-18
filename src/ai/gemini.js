@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { Provider } from './base.js';
 import { logger } from '../utils/logger.js';
 
@@ -39,14 +39,22 @@ export class GeminiProvider extends Provider {
    */
   async generateChat(systemPrompt, history, userMessage) {
     const modelName = this.config.model || 'gemini-2.5-flash';
-    const model = this.client.getGenerativeModel({ model: modelName });
 
-    // 세이프티 설정 (완화)
+    // 세이프티 설정 (최대한 완화 — 캐릭터 설정/롤플레이 자유롭게)
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT,     threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,     threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+    ];
+
+    const model = this.client.getGenerativeModel({ model: modelName, safetySettings });
+
     const generationConfig = {
-      temperature: 0.9,
+      temperature: 0.95,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
     };
 
     // History를 Gemini 포맷으로 변환
